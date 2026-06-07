@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react';
-import { TrendingUp, Sparkles } from 'lucide-react';
-import { Badge, Card, Input } from './ui';
+import { Card, Input, cn } from './ui';
 import {
   breakEvenMonths as calcBreakEven,
   estimateMarketValue,
-  isHighValue as calcHighValue,
   roiPercent as calcRoi,
 } from '../lib/value';
 
@@ -22,29 +20,18 @@ export default function ROICalculator() {
   const [backlinks, setBacklinks] = useState(200);
   const [authorityLinks, setAuthorityLinks] = useState(2);
 
-  const { value, roi, breakEvenMonths, isHighValue } = useMemo(() => {
+  const { value, roi, breakEvenMonths } = useMemo(() => {
     const v = estimateMarketValue(da, backlinks, authorityLinks);
     return {
       value: v,
       roi: calcRoi(v, cost),
       breakEvenMonths: calcBreakEven(backlinks, cost),
-      isHighValue: calcHighValue(da, backlinks),
     };
   }, [cost, da, backlinks, authorityLinks]);
 
   return (
     <Card className="mx-auto max-w-2xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <TrendingUp className="h-5 w-5 text-accent" aria-hidden="true" />
-          <h2 className="text-base font-semibold tracking-tight text-content">ROI Calculator</h2>
-        </div>
-        {isHighValue && (
-          <Badge variant="info" leftIcon={<Sparkles className="h-3.5 w-3.5" />}>
-            High Value
-          </Badge>
-        )}
-      </div>
+      <h2 className="mb-6 text-base font-semibold tracking-tight text-content">ROI Calculator</h2>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Input
@@ -78,7 +65,7 @@ export default function ROICalculator() {
             max={100}
             value={da}
             onChange={(e) => setDa(Number(e.target.value))}
-            className="w-full accent-emerald-500"
+            className="w-full accent-accent"
           />
         </div>
 
@@ -97,34 +84,45 @@ export default function ROICalculator() {
             max={20}
             value={authorityLinks}
             onChange={(e) => setAuthorityLinks(Number(e.target.value))}
-            className="w-full accent-emerald-500"
+            className="w-full accent-accent"
           />
         </div>
       </div>
 
-      <div className="mt-8 rounded-xl border border-line bg-surface-raised p-6 text-center">
-        <p className="text-sm text-content-muted">Estimated Market Value</p>
-        <p className="nums mt-1 text-4xl font-semibold tracking-tight text-content">
-          {formatEur(value)}
-        </p>
-
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <div className="flex flex-col items-center">
-            <p className="mb-1.5 text-xs text-content-subtle">ROI</p>
-            <Badge variant={roi === null ? 'neutral' : roi >= 0 ? 'success' : 'danger'}>
-              {roi === null ? 'N/A' : `${roi.toFixed(1)}%`}
-            </Badge>
-          </div>
-          <div>
-            <p className="text-xs text-content-subtle">Break-even</p>
-            <p className="nums mt-1 text-sm font-medium text-content">
-              {breakEvenMonths === null || !Number.isFinite(breakEvenMonths)
-                ? 'N/A'
-                : `${breakEvenMonths.toFixed(1)} mo`}
-            </p>
-          </div>
+      {/* Results — only the ROI carries colour; value and break-even stay neutral. */}
+      <dl className="mt-8 space-y-3 rounded-xl border border-line bg-surface-raised p-5">
+        <div className="flex items-center justify-between">
+          <dt className="text-sm text-content-muted">Est. value</dt>
+          <dd className="nums text-2xl font-semibold tracking-tight text-content">
+            {formatEur(value)}
+          </dd>
         </div>
-      </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-sm text-content-muted">ROI</dt>
+          <dd>
+            <span
+              className={cn(
+                'nums inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-semibold',
+                roi === null
+                  ? 'bg-white/[0.06] text-content-muted'
+                  : roi >= 0
+                    ? 'bg-positive-soft text-positive'
+                    : 'bg-negative-soft text-negative',
+              )}
+            >
+              {roi === null ? '—' : `${roi >= 0 ? '+' : ''}${roi.toFixed(0)}%`}
+            </span>
+          </dd>
+        </div>
+        <div className="flex items-center justify-between">
+          <dt className="text-sm text-content-muted">Break-even</dt>
+          <dd className="nums text-sm font-medium text-content">
+            {breakEvenMonths === null || !Number.isFinite(breakEvenMonths)
+              ? '—'
+              : `${breakEvenMonths.toFixed(1)} months`}
+          </dd>
+        </div>
+      </dl>
     </Card>
   );
 }

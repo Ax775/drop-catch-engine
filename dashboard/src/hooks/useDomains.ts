@@ -10,6 +10,8 @@ export interface UseDomainsResult {
   totalPages: number;
   isLoading: boolean;
   error: string | null;
+  /** Epoch ms of the last successful fetch, or null before the first load. */
+  lastUpdated: number | null;
   refetch: () => void;
 }
 
@@ -24,6 +26,7 @@ export function useDomains(filters: DomainFilters): UseDomainsResult {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
   // Keep latest filters available to the polling callback without resetting it.
   const filtersRef = useRef(filters);
@@ -37,6 +40,7 @@ export function useDomains(filters: DomainFilters): UseDomainsResult {
       setTotal(res.total);
       setTotalPages(res.totalPages);
       setError(null);
+      setLastUpdated(Date.now());
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -77,5 +81,5 @@ export function useDomains(filters: DomainFilters): UseDomainsResult {
     void load(true);
   }, [load]);
 
-  return { data, total, totalPages, isLoading, error, refetch };
+  return { data, total, totalPages, isLoading, error, lastUpdated, refetch };
 }

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Database, Gem, Plus, Rocket, Wallet } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Plus } from 'lucide-react';
 import Header from './components/Header';
 import DomainTable from './components/DomainTable';
 import ROICalculator from './components/ROICalculator';
@@ -43,31 +43,12 @@ function formatEur(value: number): string {
   }).format(value);
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Card className="flex items-center gap-4 p-5">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm text-content-muted">{label}</p>
-        <p className="nums mt-0.5 truncate text-2xl font-semibold tracking-tight text-content">
-          {value}
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function StatsCards({ refreshKey }: { refreshKey: number }) {
+/**
+ * Compact inline stat summary — a single line of figures, no cards or icons,
+ * the way a data tool surfaces totals. Example:
+ *   "47 domains · 12 high value · 3 deployed · Total est. €24,380"
+ */
+function StatsBar({ refreshKey }: { refreshKey: number }) {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
@@ -100,29 +81,21 @@ function StatsCards({ refreshKey }: { refreshKey: number }) {
     };
   }, [refreshKey]);
 
+  if (!stats) {
+    return <p className="text-sm text-content-subtle">Loading totals…</p>;
+  }
+
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard
-        icon={<Database className="h-5 w-5" />}
-        label="Total Domains"
-        value={stats ? stats.total.toLocaleString() : '—'}
-      />
-      <StatCard
-        icon={<Gem className="h-5 w-5" />}
-        label="High Value"
-        value={stats ? stats.highValue.toLocaleString() : '—'}
-      />
-      <StatCard
-        icon={<Rocket className="h-5 w-5" />}
-        label="Deployed"
-        value={stats ? stats.deployed.toLocaleString() : '—'}
-      />
-      <StatCard
-        icon={<Wallet className="h-5 w-5" />}
-        label="Total Est. Value"
-        value={stats ? formatEur(stats.totalValue) : '—'}
-      />
-    </div>
+    <p className="nums text-sm text-content-muted">
+      <span className="font-semibold text-content">{stats.total.toLocaleString()}</span> domains
+      <span className="px-1.5 text-content-subtle">·</span>
+      <span className="font-semibold text-content">{stats.highValue.toLocaleString()}</span> high value
+      <span className="px-1.5 text-content-subtle">·</span>
+      <span className="font-semibold text-content">{stats.deployed.toLocaleString()}</span> deployed
+      <span className="px-1.5 text-content-subtle">·</span>
+      Total est.{' '}
+      <span className="font-semibold text-content">{formatEur(stats.totalValue)}</span>
+    </p>
   );
 }
 
@@ -237,7 +210,7 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   const { toast } = useToast();
-  const { data, total, totalPages, isLoading, error, refetch } = useDomains(filters);
+  const { data, total, totalPages, isLoading, error, lastUpdated, refetch } = useDomains(filters);
 
   const onFiltersChange = useCallback((next: Partial<DomainFilters>) => {
     setFilters((prev) => ({ ...prev, ...next }));
@@ -381,7 +354,7 @@ export default function App() {
 
   return (
     <div className="min-h-full bg-canvas">
-      <Header />
+      <Header lastUpdated={lastUpdated} />
 
       <main className="mx-auto max-w-7xl px-6 py-8">
         <Tabs value={tab} onChange={(id) => setTab(id as Tab)}>
@@ -399,7 +372,7 @@ export default function App() {
                   Add domains
                 </Button>
               </div>
-              <StatsCards refreshKey={refreshKey} />
+              <StatsBar refreshKey={refreshKey} />
               <DomainTable
                 domains={data}
                 total={total}

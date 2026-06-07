@@ -35,14 +35,32 @@ interface DomainTableProps {
 }
 
 const CHECKBOX_CLASS =
-  'h-4 w-4 cursor-pointer rounded border-line bg-surface-raised accent-accent';
+  'h-4 w-4 cursor-pointer rounded border-line bg-surface-raised accent-accent ' +
+  'outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas';
 
-const SORTABLE: Record<string, SortBy> = {
-  'DA Score': 'da_score',
-  Backlinks: 'backlink_count',
-  'Est. Value (€)': 'estimated_value_eur',
-  Created: 'created_at',
-};
+/** Shared focus-ring treatment for the icon-only row actions. */
+const ICON_ACTION_CLASS =
+  'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-line text-content-muted ' +
+  'outline-none transition-colors hover:bg-surface-hover hover:text-content ' +
+  'focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ' +
+  'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-content-muted';
+
+interface Column {
+  label: string;
+  sortKey?: SortBy;
+  align?: 'left' | 'right';
+}
+
+const COLUMNS: Column[] = [
+  { label: 'Domain' },
+  { label: 'TLD' },
+  { label: 'DA', sortKey: 'da_score' },
+  { label: 'Backlinks', sortKey: 'backlink_count', align: 'right' },
+  { label: 'Est. Value', sortKey: 'estimated_value_eur', align: 'right' },
+  { label: 'ROI %', align: 'right' },
+  { label: 'Status' },
+  { label: 'Actions', align: 'right' },
+];
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: '', label: 'All statuses' },
@@ -53,7 +71,7 @@ const STATUS_OPTIONS: SelectOption[] = [
 ];
 
 function formatEur(value: number | null): string {
-  if (value === null || value === undefined) return 'N/A';
+  if (value === null || value === undefined) return '—';
   return new Intl.NumberFormat('en-IE', {
     style: 'currency',
     currency: 'EUR',
@@ -61,55 +79,56 @@ function formatEur(value: number | null): string {
   }).format(value);
 }
 
-function roiPercent(estimated: number | null, cost: number | null): string {
-  if (estimated === null || cost === null || cost === 0) return 'N/A';
-  return `${(((estimated - cost) / cost) * 100).toFixed(1)}%`;
+/** ROI as a signed percentage, or null when it can't be computed. */
+function roiValue(estimated: number | null, cost: number | null): number | null {
+  if (estimated === null || cost === null || cost === 0) return null;
+  return ((estimated - cost) / cost) * 100;
 }
 
-function formatDate(iso: string): string {
-  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + 'Z');
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('en-IE', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
-function SortHeader({
-  label,
+function SortableHeader({
+  column,
   filters,
   onFiltersChange,
 }: {
-  label: string;
+  column: Column;
   filters: DomainFilters;
   onFiltersChange: (next: Partial<DomainFilters>) => void;
 }) {
-  const sortKey = SORTABLE[label];
-  const isActive = sortKey !== undefined && filters.sortBy === sortKey;
+  const alignClass = column.align === 'right' ? 'text-right' : 'text-left';
 
-  if (!sortKey) {
-    return <th className="px-4 py-3 text-left text-xs font-medium text-content-subtle">{label}</th>;
+  if (!column.sortKey) {
+    return (
+      <th className={cn('px-4 py-3 text-xs font-medium text-content-subtle', alignClass)}>
+        {column.label}
+      </th>
+    );
   }
 
+  const isActive = filters.sortBy === column.sortKey;
   const toggle = () => {
     if (isActive) {
       onFiltersChange({ sortDir: filters.sortDir === 'asc' ? 'desc' : 'asc', page: 1 });
     } else {
-      onFiltersChange({ sortBy: sortKey, sortDir: 'desc', page: 1 });
+      onFiltersChange({ sortBy: column.sortKey, sortDir: 'desc', page: 1 });
     }
   };
 
   return (
     <th
-      className="px-4 py-3 text-left text-xs font-medium text-content-subtle"
+      className={cn('px-4 py-3 text-xs font-medium text-content-subtle', alignClass)}
       aria-sort={isActive ? (filters.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
     >
       <button
         type="button"
         onClick={toggle}
         className={cn(
-          'inline-flex items-center gap-1 rounded outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent',
+          'inline-flex items-center gap-1 rounded outline-none transition-colors',
+          'focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas',
+          column.align === 'right' && 'flex-row-reverse',
           isActive ? 'text-content' : 'hover:text-content',
         )}
       >
-        {label}
+        {column.label}
         {isActive ? (
           filters.sortDir === 'asc' ? (
             <ArrowUp className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
@@ -117,12 +136,25 @@ function SortHeader({
             <ArrowDown className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
           )
         ) : (
-          <span className="text-content-subtle/50" aria-hidden="true">
+          <span className="text-content-subtle/40" aria-hidden="true">
             ↕
           </span>
         )}
       </button>
     </th>
+  );
+}
+
+/** DA score: number plus a thin 0–100 progress bar beneath it. */
+function DaScore({ score }: { score: number }) {
+  const pct = Math.max(0, Math.min(100, score));
+  return (
+    <div className="w-14">
+      <span className="nums text-content">{score}</span>
+      <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
   );
 }
 
@@ -145,23 +177,10 @@ export default function DomainTable({
   bulkBusy,
 }: DomainTableProps) {
   const page = filters.page ?? 1;
-  const headers = useMemo(
-    () => [
-      'Domain Name',
-      'TLD',
-      'DA Score',
-      'Backlinks',
-      'Status',
-      'Est. Value (€)',
-      'Acquisition Cost (€)',
-      'ROI %',
-      'Created',
-      'Actions',
-    ],
-    [],
-  );
   // total columns including the leading checkbox column
-  const colCount = headers.length + 1;
+  const colCount = COLUMNS.length + 1;
+  const hasFilters =
+    Boolean(filters.search) || Boolean(filters.status) || filters.minDa !== undefined;
 
   const pageIds = useMemo(() => domains.map((d) => d.id), [domains]);
   const allSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
@@ -173,7 +192,7 @@ export default function DomainTable({
 
   return (
     <Card>
-      {/* Filter bar */}
+      {/* Filter bar — single row: search left, status middle, min DA right */}
       <div className="flex flex-wrap items-end gap-3 border-b border-line p-4">
         <div className="min-w-[200px] flex-1">
           <Input
@@ -224,9 +243,7 @@ export default function DomainTable({
       {/* Selection / bulk-action bar */}
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 border-b border-line bg-surface-raised px-4 py-2.5 text-sm">
-          <span className="font-medium text-content">
-            {selectedIds.size} selected
-          </span>
+          <span className="font-medium text-content">{selectedIds.size} selected</span>
           <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
@@ -275,10 +292,10 @@ export default function DomainTable({
                   disabled={domains.length === 0}
                 />
               </th>
-              {headers.map((h) => (
-                <SortHeader
-                  key={h}
-                  label={h}
+              {COLUMNS.map((col) => (
+                <SortableHeader
+                  key={col.label}
+                  column={col}
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 />
@@ -287,14 +304,20 @@ export default function DomainTable({
           </thead>
           <tbody>
             {isLoading &&
-              Array.from({ length: 5 }).map((_, i) => (
+              Array.from({ length: 8 }).map((_, i) => (
                 <tr key={`skeleton-${i}`} className="border-b border-line/60">
                   <td className="px-4 py-4">
                     <Skeleton className="h-4 w-4" />
                   </td>
-                  {headers.map((h) => (
-                    <td key={h} className="px-4 py-4">
-                      <Skeleton className="h-4 w-full" />
+                  {COLUMNS.map((col) => (
+                    <td key={col.label} className="px-4 py-4">
+                      <Skeleton
+                        className={cn(
+                          'h-4',
+                          col.label === 'Domain' ? 'w-40' : col.label === 'Actions' ? 'w-24' : 'w-12',
+                          col.align === 'right' && 'ml-auto',
+                        )}
+                      />
                     </td>
                   ))}
                 </tr>
@@ -313,8 +336,12 @@ export default function DomainTable({
                 <td colSpan={colCount}>
                   <EmptyState
                     size="sm"
-                    title="No domains found"
-                    description="Try adjusting your filters, or ingest new domains to get started."
+                    title={hasFilters ? 'No matching domains' : 'No domains tracked yet'}
+                    description={
+                      hasFilters
+                        ? 'No domains match the current filters. Try clearing search, status, or min DA.'
+                        : 'Use the form above to add your first domain.'
+                    }
                   />
                 </td>
               </tr>
@@ -323,14 +350,13 @@ export default function DomainTable({
             {!isLoading &&
               !error &&
               domains.map((d) => {
-                const isHigh = d.status === 'high_value';
+                const roi = roiValue(d.estimated_value_eur, d.acquisition_cost_eur);
                 return (
                   <tr
                     key={d.id}
                     className={cn(
                       'border-b border-line/60 transition-colors last:border-0 hover:bg-white/[0.02]',
-                      isHigh && 'bg-accent-soft/30',
-                      selectedIds.has(d.id) && 'bg-accent-soft/50',
+                      selectedIds.has(d.id) && 'bg-accent-soft/40',
                     )}
                   >
                     <td className="px-4 py-3">
@@ -342,68 +368,62 @@ export default function DomainTable({
                         aria-label={`Select ${d.domain_name}`}
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <span className="flex items-center gap-2 font-medium text-content">
-                        {isHigh && (
-                          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
-                        )}
-                        {d.domain_name}
-                      </span>
-                    </td>
+                    <td className="px-4 py-3 font-medium text-content">{d.domain_name}</td>
                     <td className="nums px-4 py-3 text-content-muted">{d.tld ?? '—'}</td>
-                    <td className="nums px-4 py-3 text-content">{d.da_score}</td>
-                    <td className="nums px-4 py-3 text-content">
-                      {d.backlink_count.toLocaleString()}
+                    <td className="px-4 py-3">
+                      <DaScore score={d.da_score} />
+                    </td>
+                    <td className="nums px-4 py-3 text-right text-content">
+                      {d.backlink_count.toLocaleString('en-IE')}
+                    </td>
+                    <td className="nums px-4 py-3 text-right font-medium text-content">
+                      {formatEur(d.estimated_value_eur)}
+                    </td>
+                    <td className="nums px-4 py-3 text-right">
+                      {roi === null ? (
+                        <span className="text-content-subtle">—</span>
+                      ) : (
+                        <span className={roi >= 0 ? 'text-positive' : 'text-negative'}>
+                          {roi >= 0 ? '+' : ''}
+                          {roi.toFixed(0)}%
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={d.status} />
                     </td>
-                    <td className="nums px-4 py-3 font-medium text-content">
-                      {formatEur(d.estimated_value_eur)}
-                    </td>
-                    <td className="nums px-4 py-3 text-content-muted">
-                      {formatEur(d.acquisition_cost_eur)}
-                    </td>
-                    <td className="nums px-4 py-3">
-                      {(() => {
-                        const roi = roiPercent(d.estimated_value_eur, d.acquisition_cost_eur);
-                        if (roi === 'N/A') return <span className="text-content-subtle">N/A</span>;
-                        const positive = !roi.startsWith('-');
-                        return (
-                          <span className={positive ? 'text-positive' : 'text-negative'}>{roi}</span>
-                        );
-                      })()}
-                    </td>
-                    <td className="nums px-4 py-3 text-content-muted">{formatDate(d.created_at)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center justify-end gap-1.5">
                         <a
                           href={blueprintUrl(d.id)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line px-3 text-xs font-medium text-content-muted outline-none transition-colors hover:bg-surface-hover hover:text-content focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+                          className={ICON_ACTION_CLASS}
+                          title="Open blueprint"
+                          aria-label={`Open blueprint for ${d.domain_name}`}
                         >
-                          <FileCode className="h-3.5 w-3.5" aria-hidden="true" />
-                          Blueprint
+                          <FileCode className="h-4 w-4" aria-hidden="true" />
                         </a>
-                        <Button
-                          size="sm"
-                          variant="primary"
+                        <button
+                          type="button"
                           onClick={() => onDeploy(d)}
                           disabled={d.status === 'deployed'}
-                          leftIcon={<Rocket className="h-3.5 w-3.5" />}
+                          className={ICON_ACTION_CLASS}
+                          title={d.status === 'deployed' ? 'Already deployed' : 'Deploy'}
+                          aria-label={`Deploy ${d.domain_name}`}
                         >
-                          Deploy
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
+                          <Rocket className="h-4 w-4" aria-hidden="true" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => onArchive(d)}
                           disabled={d.status === 'archived'}
-                          leftIcon={<Archive className="h-3.5 w-3.5" />}
+                          className={ICON_ACTION_CLASS}
+                          title={d.status === 'archived' ? 'Already archived' : 'Archive'}
+                          aria-label={`Archive ${d.domain_name}`}
                         >
-                          Archive
-                        </Button>
+                          <Archive className="h-4 w-4" aria-hidden="true" />
+                        </button>
                       </div>
                     </td>
                   </tr>
