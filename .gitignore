@@ -1,0 +1,34 @@
+# Klantdocument — NIET publiek
+luminex/
+
+# Dependencies
+node_modules/
+
+# Cloudflare / Wrangler lokale state
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Build output
+dist/
+build/
+.output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env / secrets
+.env
+.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp

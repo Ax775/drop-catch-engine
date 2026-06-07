@@ -1,0 +1,43 @@
+name = "drop-catch-engine"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# D1 — created with: wrangler d1 create drop-catch-db
+# Deploying to a fresh account? Re-run that command and replace database_id below.
+# Apply the schema with: npm run db:migrate  (or db:migrate:local for local dev)
+[[d1_databases]]
+binding = "DB"
+database_name = "drop-catch-db"
+database_id = "d5119650-2b13-4aee-9eb5-79bc6ae067f4"
+
+# KV — created with:
+#   wrangler kv namespace create SEO_CACHE            -> id
+#   wrangler kv namespace create SEO_CACHE --preview  -> preview_id
+# Replace both ids below when provisioning a fresh account.
+[[kv_namespaces]]
+binding = "SEO_CACHE"
+id = "9111ce2c70ec45a1bba13849d28b042d"
+preview_id = "a220e83bd0c440efa850faf8d5e96d5b"
+
+# Queues — created with:
+#   wrangler queues create domain-score-queue
+#   wrangler queues create domain-score-dlq
+[[queues.producers]]
+binding = "DOMAIN_QUEUE"
+queue = "domain-score-queue"
+
+[[queues.consumers]]
+queue = "domain-score-queue"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "domain-score-dlq"
+
+[vars]
+ALLOWED_ORIGINS = "https://drop-catch-dashboard.pages.dev,http://localhost:5173,http://localhost:5174,http://localhost:5175"
+RATE_LIMIT_MAX = "100"
+RATE_LIMIT_WINDOW_SECONDS = "60"
+
+# Secrets (set via `wrangler secret put SEO_API_KEY`):
+# SEO_API_KEY
