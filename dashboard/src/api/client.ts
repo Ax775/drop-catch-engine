@@ -108,3 +108,14 @@ export function getLogs(params?: LogQueryParams): Promise<LogsResponse> {
 export function blueprintUrl(id: string): string {
   return `${API_BASE}/api/blueprint/${encodeURIComponent(id)}`;
 }
+
+/**
+ * Create a Stripe Checkout Session for unlocking a domain's blueprint.
+ * Returns the hosted Checkout URL the caller should redirect the browser to.
+ */
+export function createCheckoutSession(domainId: string): Promise<{ url: string }> {
+  return request<{ url: string }>('/api/checkout', {
+    method: 'POST',
+    body: JSON.stringify({ domain_id: domainId }),
+  });
+}

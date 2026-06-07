@@ -278,6 +278,29 @@ export default function App() {
     [refetch, bumpRefresh, toast],
   );
 
+  // Returning from Stripe Checkout: the success_url carries ?session_id & domain_id.
+  // Confirm payment to the user, refresh (the webhook flips status → deployed),
+  // and scrub the params so a reload doesn't re-fire the toast.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get('session_id') || !params.get('domain_id')) return;
+
+    toast({
+      title: 'Payment successful',
+      description: 'Blueprint unlocked — the domain will show as deployed shortly.',
+      variant: 'success',
+    });
+    refetch();
+    bumpRefresh();
+
+    params.delete('session_id');
+    params.delete('domain_id');
+    const qs = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${qs ? `?${qs}` : ''}`);
+    // Run once on mount; the callbacks are stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- Multi-select bulk actions ----
   const toggleRow = useCallback((id: string) => {
     setSelectedIds((prev) => {

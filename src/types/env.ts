@@ -18,4 +18,14 @@ export interface Env {
   ACCESS_TEAM_DOMAIN?: string;
   /** Cloudflare Access application AUD tag. Auth is enforced only when both are set. */
   ACCESS_AUD?: string;
+
+  // --- Stripe (set via `wrangler secret put …`; payments are a no-op until present) ---
+  /** Stripe secret API key (sk_…). Used to create Checkout Sessions. */
+  STRIPE_SECRET_KEY: string;
+  /** Stripe publishable key (pk_…). Reserved for client-side Stripe.js if needed. */
+  STRIPE_PUBLISHABLE_KEY: string;
+  /** Signing secret (whsec_…) for verifying webhook payloads. */
+  STRIPE_WEBHOOK_SECRET: string;
+  /** Public dashboard origin — base for Checkout success/cancel redirects. */
+  DASHBOARD_URL: string;
 }

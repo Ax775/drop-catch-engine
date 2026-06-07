@@ -1,15 +1,17 @@
 import { useCallback, useState } from 'react';
-import { Check, Copy, Rocket } from 'lucide-react';
+import { Check, Copy, CreditCard } from 'lucide-react';
 import type { DomainRow } from '../types';
 import { ApiError } from '../types';
-import { blueprintUrl, updateDomainStatus } from '../api/client';
+import { blueprintUrl, createCheckoutSession } from '../api/client';
 import { Button, Modal, cn } from './ui';
 import StatusBadge from './StatusBadge';
 
 interface DeployModalProps {
   domain: DomainRow;
   onClose: () => void;
-  onDeployed: (updated: DomainRow) => void;
+  /** Kept for API symmetry — the deploy now completes server-side via the
+   *  Stripe webhook after the user returns from Checkout (handled in App). */
+  onDeployed?: (updated: DomainRow) => void;
 }
 
 function formatEur(value: number | null): string {
@@ -22,13 +24,14 @@ function formatEur(value: number | null): string {
 }
 
 /**
- * Deploy confirmation dialog. Built on the accessible Modal primitive (focus
+ * Blueprint unlock dialog. Built on the accessible Modal primitive (focus
  * trap, scroll lock, focus restore, Esc/backdrop close come for free).
- * Kept compact and businesslike — a summary, one primary action, and a
- * secondary "copy URL" link rather than competing buttons.
+ * The primary action starts a Stripe Checkout Session and redirects the
+ * browser to Stripe's hosted page; the actual deploy is finalised server-side
+ * by the webhook once payment succeeds.
  */
-export default function DeployModal({ domain, onClose, onDeployed }: DeployModalProps) {
-  const [status, setStatus] = useState<'idle' | 'deploying' | 'success'>('idle');
+export default function DeployModal({ domain, onClose }: DeployModalProps) {
+  const [status, setStatus] = useState<'idle' | 'redirecting'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -42,44 +45,42 @@ export default function DeployModal({ domain, onClose, onDeployed }: DeployModal
     }
   }, [domain.id]);
 
-  const confirmDeploy = useCallback(async () => {
-    setStatus('deploying');
+  const startCheckout = useCallback(async () => {
+    setStatus('redirecting');
     setError(null);
     try {
-      const updated = await updateDomainStatus(domain.id, 'deployed');
-      setStatus('success');
-      onDeployed(updated);
-      window.setTimeout(onClose, 900);
+      const { url } = await createCheckoutSession(domain.id);
+      // Hand off to Stripe's hosted Checkout. We do NOT clear the loading state
+      // on success — the page is navigating away.
+      window.location.href = url;
     } catch (err) {
       setStatus('idle');
-      setError(err instanceof ApiError ? err.message : 'Deploy failed');
+      setError(err instanceof ApiError ? err.message : 'Could not start checkout');
     }
-  }, [domain.id, onDeployed, onClose]);
+  }, [domain.id]);
 
   return (
     <Modal
       open
       onClose={onClose}
-      title="Deploy asset"
-      // Prevent accidental dismissal mid-deploy.
-      disableBackdropClose={status === 'deploying'}
-      disableEscapeClose={status === 'deploying'}
+      title="Unlock blueprint"
+      // Prevent accidental dismissal while the session is being created.
+      disableBackdropClose={status === 'redirecting'}
+      disableEscapeClose={status === 'redirecting'}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} disabled={status === 'deploying'}>
+          <Button variant="ghost" onClick={onClose} disabled={status === 'redirecting'}>
             Cancel
           </Button>
           <Button
             variant="primary"
-            onClick={confirmDeploy}
-            isLoading={status === 'deploying'}
-            loadingText="Deploying…"
+            onClick={startCheckout}
+            isLoading={status === 'redirecting'}
+            loadingText="Redirecting…"
             disabled={status !== 'idle'}
-            leftIcon={
-              status === 'success' ? <Check className="h-4 w-4" /> : <Rocket className="h-4 w-4" />
-            }
+            leftIcon={<CreditCard className="h-4 w-4" />}
           >
-            {status === 'success' ? 'Deployed' : 'Confirm Deploy'}
+            Unlock Blueprint — €29
           </Button>
         </>
       }
@@ -99,7 +100,8 @@ export default function DeployModal({ domain, onClose, onDeployed }: DeployModal
         </p>
 
         <p className="text-sm text-content-subtle">
-          Deploying registers this domain as an active asset.
+          A one-time €29 payment unlocks the full intelligence report and
+          registers this domain as an active asset.
         </p>
 
         <div className="flex items-center justify-between border-t border-line pt-3">

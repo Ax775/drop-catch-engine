@@ -7,6 +7,7 @@ import { ingestRoute } from './routes/ingest';
 import { domainsRoute } from './routes/domains';
 import { logsRoute } from './routes/logs';
 import { blueprintRoute } from './routes/blueprint';
+import { checkoutRoute, webhookRoute } from './routes/checkout';
 import { handleQueue } from './queue/consumer';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -18,9 +19,12 @@ app.use('*', cors());
 app.use('/api/*', rateLimit());
 
 // Cloudflare Access (no-op until configured). Enforced across the API surface
-// EXCEPT the health check and the SEO blueprint pages, which must stay public
-// and crawlable.
-app.use('/api/*', accessAuth({ publicPrefixes: ['/api/health', '/api/blueprint'] }));
+// EXCEPT the health check, the SEO blueprint pages (must stay public and
+// crawlable), and the Stripe webhook (Stripe carries no Access cookie).
+app.use(
+  '/api/*',
+  accessAuth({ publicPrefixes: ['/api/health', '/api/blueprint', '/api/webhook'] }),
+);
 
 app.get('/api/health', (c) =>
   c.json({ status: 'ok', ts: new Date().toISOString() }),
@@ -30,6 +34,8 @@ app.route('/api/ingest', ingestRoute);
 app.route('/api/domains', domainsRoute);
 app.route('/api/logs', logsRoute);
 app.route('/api/blueprint', blueprintRoute);
+app.route('/api/checkout', checkoutRoute);
+app.route('/api/webhook', webhookRoute);
 
 app.notFound((c) => c.json({ error: 'Not found' }, 404));
 

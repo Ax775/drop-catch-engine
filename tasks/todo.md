@@ -51,6 +51,24 @@ via toasts. Both `tsc && vite build` (frontend) and `wrangler deploy --dry-run`
 - [x] Worker deployed to Cloudflare (drop-catch-engine.*.workers.dev) with real
       D1/KV/Queue bindings; dashboard `.env.local` points at it
 
+## Task: Stripe Checkout — blueprint/domain unlock (€29)
+
+Keys arrive later as secrets. Full flow built now.
+
+- [ ] `src/routes/checkout.ts` — `POST /api/checkout` (create session) + `POST /api/webhook` (verify sig, handle `checkout.session.completed`)
+- [ ] `src/types/env.ts` — STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET, DASHBOARD_URL
+- [ ] `src/index.ts` — mount routes; `/api/webhook` is a public prefix (Stripe has no Access cookie)
+- [ ] `wrangler.toml` — DASHBOARD_URL var + document Stripe secrets
+- [ ] `package.json` — `stripe: ^14.0.0`
+- [ ] `dashboard/src/api/client.ts` — `createCheckoutSession(domainId)`
+- [ ] `dashboard/src/components/DeployModal.tsx` — "Unlock Blueprint — €29" → redirect to Stripe
+- [ ] `dashboard/src/App.tsx` — return handler (`?session_id=&domain_id=`) → toast + refresh + clean URL
+- [ ] install / tsc / deploy worker / build+deploy dashboard / commit+push
+
+Decisions: webhook does idempotent `UPDATE domains SET status='deployed'` + log (no purchases table);
+Stripe on Workers uses `createFetchHttpClient()` + `constructEventAsync(..., createSubtleCryptoProvider())`;
+`apiVersion` omitted to dodge type-literal mismatch; return handling lives in App (modal navigated to Stripe).
+
 ## In progress / next
 - [x] Swappable SEO provider behind the mock (mock | ahrefs adapter) + tests
 - [x] Deployed the SEO-provider refactor to the live Worker (version e926bdfd)
