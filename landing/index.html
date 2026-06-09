@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drop Catch Engine — Score dropping domains before the competition</title>
+<meta name="description" content="Score expired domains on Domain Authority, backlink quality, and source authority. Get an instant SEO blueprint for any domain worth owning — €29 per report.">
+<meta property="og:title" content="Drop Catch Engine — Domain Intelligence">
+<meta property="og:description" content="Score expired domains on DA, backlinks, and source authority. Instant SEO blueprint for €29.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0a0a0a">
+<style>
+  :root{
+    --bg:#0a0a0a;
+    --panel:#0f0f10;
+    --panel-2:#121214;
+    --text:#ededed;
+    --muted:#8a8a92;
+    --faint:#5c5c63;
+    --line:rgba(255,255,255,.08);
+    --line-strong:rgba(255,255,255,.14);
+    --accent:#7c5cff;
+    --accent-soft:rgba(124,92,255,.14);
+    --good:#3ad29f;
+    --good-soft:rgba(58,210,159,.12);
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  /* NAVBAR */
+  header.nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,10,10,.82);
+    backdrop-filter:saturate(140%) blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .nav-inner{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:16px;height:60px;
+  }
+  .logo{
+    font-family:var(--mono);font-weight:700;color:#fff;
+    letter-spacing:.14em;font-size:14px;white-space:nowrap;
+  }
+  .logo .dot{color:var(--accent)}
+  .nav-link{
+    font-size:14px;color:var(--muted);
+    padding:8px 14px;border:1px solid var(--line);border-radius:8px;
+    transition:border-color .15s,color .15s,background .15s;
+  }
+  .nav-link:hover{color:#fff;border-color:var(--line-strong);background:rgba(255,255,255,.03)}
+
+  /* HERO */
+  .hero{padding:96px 0 72px;border-bottom:1px solid var(--line)}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 22px;
+  }
+  h1{
+    font-size:clamp(34px,6vw,60px);line-height:1.05;
+    letter-spacing:-.02em;font-weight:680;margin:0;max-width:18ch;
+    color:#fff;
+  }
+  .hero p.sub{
+    margin:24px 0 0;max-width:62ch;font-size:18px;color:var(--muted);
+  }
+  .ctas{display:flex;flex-wrap:wrap;gap:14px;margin-top:36px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:15px;font-weight:560;
+    padding:13px 22px;border-radius:10px;
+    border:1px solid transparent;cursor:pointer;
+    transition:transform .12s,background .15s,border-color .15s,color .15s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:#fff;box-shadow:0 1px 0 rgba(255,255,255,.12) inset}
+  .btn-primary:hover{background:#8c70ff}
+  .btn-ghost{border-color:var(--line-strong);color:var(--text);background:transparent}
+  .btn-ghost:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.24)}
+  .statstrip{
+    margin-top:40px;font-family:var(--mono);font-size:13px;
+    color:var(--faint);letter-spacing:.02em;
+    display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;
+  }
+  .statstrip .mid{color:rgba(255,255,255,.18)}
+  .statstrip b{color:var(--text);font-weight:600}
+
+  /* SECTION SCAFFOLD */
+  section{padding:80px 0;border-bottom:1px solid var(--line)}
+  .sec-head{margin:0 0 44px}
+  .sec-kicker{
+    font-family:var(--mono);font-size:12px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 12px;
+  }
+  .sec-title{font-size:clamp(24px,3.4vw,32px);letter-spacing:-.01em;margin:0;color:#fff;font-weight:640}
+
+  /* HOW IT WORKS */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  .step{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:26px 24px 28px;
+    transition:border-color .15s,transform .15s;
+  }
+  .step:hover{border-color:var(--line-strong);transform:translateY(-2px)}
+  .step .idx{
+    font-family:var(--mono);font-size:13px;color:var(--accent);
+    letter-spacing:.1em;
+  }
+  .step h3{margin:16px 0 8px;font-size:18px;color:#fff;font-weight:600}
+  .step p{margin:0;color:var(--muted);font-size:15px}
+
+  /* EXAMPLE DOMAINS — TABLE */
+  .panel{
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;
+  }
+  table.feed{width:100%;border-collapse:collapse;font-size:15px}
+  table.feed thead th{
+    text-align:left;font-family:var(--mono);font-weight:500;
+    font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--faint);padding:16px 20px;border-bottom:1px solid var(--line);
+    background:var(--panel-2);
+  }
+  table.feed thead th.r,table.feed td.r{text-align:right}
+  table.feed tbody td{padding:18px 20px;border-bottom:1px solid var(--line);vertical-align:top}
+  table.feed tbody tr:last-child td{border-bottom:0}
+  table.feed tbody tr:hover{background:rgba(255,255,255,.018)}
+  .dom{font-family:var(--mono);font-size:15px;color:#fff;font-weight:600}
+  .dom-meta{font-size:12.5px;color:var(--faint);margin-top:4px}
+  td.metric{font-family:var(--mono);color:var(--text)}
+  .est{color:#fff;font-weight:600}
+  .badge{
+    display:inline-block;font-family:var(--mono);font-size:11px;
+    letter-spacing:.06em;padding:5px 10px;border-radius:999px;
+    border:1px solid transparent;white-space:nowrap;
+  }
+  .badge.hi{color:var(--good);background:var(--good-soft);border-color:rgba(58,210,159,.28)}
+  .badge.sc{color:var(--muted);background:rgba(255,255,255,.04);border-color:var(--line)}
+  .bp-btn{
+    display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:560;
+    padding:9px 14px;border-radius:8px;border:1px solid var(--line-strong);
+    color:#fff;background:rgba(124,92,255,.10);white-space:nowrap;
+    transition:background .15s,border-color .15s;
+  }
+  .bp-btn:hover{background:var(--accent-soft);border-color:rgba(124,92,255,.55)}
+  .preview{position:relative;margin-top:14px;max-width:340px}
+  .preview .lines{
+    filter:blur(4px);opacity:.5;user-select:none;pointer-events:none;
+    font-family:var(--mono);font-size:11px;line-height:1.9;color:var(--muted);
+  }
+  .preview .lines span{display:block;background:rgba(255,255,255,.05);border-radius:3px;height:9px;margin:6px 0}
+  .preview .lines .w1{width:96%}.preview .lines .w2{width:78%}.preview .lines .w3{width:88%}.preview .lines .w4{width:62%}
+  .lock{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--faint);
+  }
+  .lock span{border:1px solid var(--line);background:rgba(10,10,10,.6);padding:5px 12px;border-radius:999px}
+
+  /* WHY */
+  .why p{font-size:19px;line-height:1.65;color:var(--muted);max-width:64ch;margin:0}
+  .why b{color:#fff;font-weight:600}
+  .why .accent{color:var(--accent)}
+
+  /* PRICING */
+  .price-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:40px;align-items:center}
+  .price-num{font-family:var(--mono);font-size:clamp(32px,5vw,46px);color:#fff;letter-spacing:-.01em;margin:0;font-weight:680}
+  .price-num small{color:var(--muted);font-size:.5em;font-weight:500;letter-spacing:0}
+  .price-sub{color:var(--muted);font-size:17px;margin:14px 0 28px;max-width:46ch}
+  .checks{list-style:none;margin:0 0 0;padding:0;display:grid;gap:14px}
+  .checks li{display:flex;gap:12px;align-items:center;font-size:16px;color:var(--text)}
+  .checks .tick{
+    color:var(--good);font-weight:700;width:22px;height:22px;flex:0 0 22px;
+    display:inline-flex;align-items:center;justify-content:center;
+    border:1px solid rgba(58,210,159,.3);border-radius:6px;background:var(--good-soft);font-size:12px;
+  }
+  .price-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px;
+  }
+
+  /* FOOTER */
+  footer{padding:34px 0;border-top:1px solid var(--line)}
+  footer .f-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  footer p{margin:0;font-family:var(--mono);font-size:12.5px;color:var(--faint);letter-spacing:.03em}
+
+  /* RESPONSIVE */
+  @media (max-width:860px){
+    .steps{grid-template-columns:1fr}
+    .price-grid{grid-template-columns:1fr;gap:32px}
+    .hero{padding:64px 0 52px}
+    section{padding:60px 0}
+  }
+  @media (max-width:680px){
+    .nav-inner{height:auto;flex-direction:row;flex-wrap:wrap;padding:12px 0;gap:10px}
+    /* TABLE -> STACKED CARDS */
+    table.feed,table.feed thead,table.feed tbody,table.feed tr,table.feed td{display:block;width:100%}
+    table.feed thead{display:none}
+    table.feed tbody td{border-bottom:0;padding:4px 18px}
+    table.feed tbody tr{
+      border-bottom:1px solid var(--line);padding:18px 0;
+      display:grid;grid-template-columns:1fr auto;gap:8px 14px;align-items:start;
+    }
+    table.feed td.c-dom{grid-column:1 / -1}
+    table.feed td.metric.r{text-align:left;grid-column:auto}
+    table.feed td.c-est{text-align:left}
+    table.feed td.c-status{justify-self:end}
+    table.feed td.c-action{grid-column:1 / -1;margin-top:6px}
+    .bp-btn{width:100%;justify-content:center}
+    .preview{max-width:100%}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<header class="nav">
+  <div class="wrap nav-inner">
+    <div class="logo">DROP CATCH ENGINE<span class="dot">.</span></div>
+    <a class="nav-link" href="https://drop-catch-dashboard.pages.dev">Dashboard →</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" style="border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <p class="eyebrow">Domain Intelligence</p>
+    <h1>Score dropping domains before the competition does.</h1>
+    <p class="sub">Drop Catch Engine scores expired domains on Domain Authority, backlink quality, and source authority. When you find one worth owning, get an SEO blueprint instantly — for €29.</p>
+    <div class="ctas">
+      <a class="btn btn-primary" href="https://drop-catch-dashboard.pages.dev">Start scoring domains →</a>
+      <a class="btn btn-ghost" href="#domains">See it in action ↓</a>
+    </div>
+    <div class="statstrip">
+      <span><b>DA 0–100</b> scoring</span><span class="mid">·</span>
+      <span>Backlink analysis</span><span class="mid">·</span>
+      <span>SEO blueprint included</span><span class="mid">·</span>
+      <span><b>€29</b> per report</span>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-kicker">How it works</p>
+      <h2 class="sec-title">From domain list to deployable blueprint.</h2>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="idx">01</div>
+        <h3>Add domains</h3>
+        <p>Drop a list of domains you want to evaluate. We handle everything from there.</p>
+      </div>
+      <div class="step">
+        <div class="idx">02</div>
+        <h3>We score</h3>
+        <p>Our engine fetches domain authority, total backlink count, and checks for high-value source links (.gov, .edu, .nl authority domains).</p>
+      </div>
+      <div class="step">
+        <div class="idx">03</div>
+        <h3>Buy the blueprint</h3>
+        <p>For €29, get the full intelligence report plus a ready-to-deploy SEO landing page that preserves the domain's historical link juice.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EXAMPLE DOMAINS -->
+<section id="domains">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-kicker">Live feed</p>
+      <h2 class="sec-title">Example scored domains.</h2>
+    </div>
+    <div class="panel">
+      <table class="feed">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th class="r">DA</th>
+            <th class="r">Backlinks</th>
+            <th class="r">Est. value</th>
+            <th>Status</th>
+            <th class="r">Blueprint</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-dom">
+              <div class="dom">vintage-watches.com</div>
+              <div class="dom-meta">Authority sources: .edu × 3 · .gov × 1</div>
+              <div class="preview">
+                <div class="lines"><span class="w1"></span><span class="w3"></span><span class="w2"></span><span class="w4"></span></div>
+                <div class="lock"><span>🔒 Locked report</span></div>
+              </div>
+            </td>
+            <td class="metric r num">91</td>
+            <td class="metric r num">1,432</td>
+            <td class="c-est r est num">€1,208</td>
+            <td class="c-status"><span class="badge hi">HIGH VALUE</span></td>
+            <td class="c-action r"><a class="bp-btn" href="https://drop-catch-dashboard.pages.dev">Get blueprint — €29</a></td>
+          </tr>
+          <tr>
+            <td class="c-dom">
+              <div class="dom">berlin-coffee.de</div>
+              <div class="dom-meta">Authority sources: .nl × 2 · .edu × 1</div>
+              <div class="preview">
+                <div class="lines"><span class="w2"></span><span class="w1"></span><span class="w4"></span><span class="w3"></span></div>
+                <div class="lock"><span>🔒 Locked report</span></div>
+              </div>
+            </td>
+            <td class="metric r num">66</td>
+            <td class="metric r num">4,544</td>
+            <td class="c-est r est num">€1,941</td>
+            <td class="c-status"><span class="badge hi">HIGH VALUE</span></td>
+            <td class="c-action r"><a class="bp-btn" href="https://drop-catch-dashboard.pages.dev">Get blueprint — €29</a></td>
+          </tr>
+          <tr>
+            <td class="c-dom">
+              <div class="dom">quantum-ledger.io</div>
+              <div class="dom-meta">Authority sources: pending verification</div>
+              <div class="preview">
+                <div class="lines"><span class="w3"></span><span class="w2"></span><span class="w1"></span><span class="w4"></span></div>
+                <div class="lock"><span>🔒 Locked report</span></div>
+              </div>
+            </td>
+            <td class="metric r num">45</td>
+            <td class="metric r num">892</td>
+            <td class="c-est r est num">€620</td>
+            <td class="c-status"><span class="badge sc">SCANNED</span></td>
+            <td class="c-action r"><a class="bp-btn" href="https://drop-catch-dashboard.pages.dev">Get blueprint — €29</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- WHY THIS WORKS -->
+<section class="why">
+  <div class="wrap">
+    <div class="sec-head">
+      <p class="sec-kicker">Why this works</p>
+      <h2 class="sec-title">Authority outlives the domain.</h2>
+    </div>
+    <p>Expired domains retain their backlink authority for months. A <b>DA 70+</b> domain with <span class="accent">.edu backlinks</span> can rank new content immediately. Finding those domains manually takes hours — <b>Drop Catch Engine does it in seconds.</b></p>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <div class="wrap">
+    <div class="price-grid">
+      <div>
+        <p class="sec-kicker">Pricing</p>
+        <p class="price-num">€29 <small>per domain report</small></p>
+        <p class="price-sub">No subscription. Pay only when you find a domain worth investigating.</p>
+        <a class="btn btn-primary" href="https://drop-catch-dashboard.pages.dev">Start scoring domains →</a>
+      </div>
+      <div class="price-card">
+        <ul class="checks">
+          <li><span class="tick">✓</span> Full DA + backlink breakdown</li>
+          <li><span class="tick">✓</span> Authority source links</li>
+          <li><span class="tick">✓</span> SEO blueprint included</li>
+          <li><span class="tick">✓</span> ROI estimate</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap f-inner">
+    <p>© 2025 Xaven · Drop Catch Engine</p>
+    <p>Domain arbitrage intelligence</p>
+  </div>
+</footer>
+
+</body>
+</html>

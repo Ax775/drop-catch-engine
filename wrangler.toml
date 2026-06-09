@@ -46,3 +46,4 @@ DASHBOARD_URL = "https://drop-catch-dashboard.pages.dev"
 # STRIPE_SECRET_KEY        (sk_…)
 # STRIPE_PUBLISHABLE_KEY   (pk_…)
 # STRIPE_WEBHOOK_SECRET    (whsec_… — from the Stripe webhook endpoint config)
+# RESEND_API_KEY           (re_…  — payment notification emails; sender domain must be verified in Resend)

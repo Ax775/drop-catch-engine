@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import Stripe from 'stripe';
+import { Resend } from 'resend';
 import type { Env } from '../types/env';
 
 /**
@@ -154,6 +155,31 @@ webhookRoute.post('/', async (c) => {
         amountTotal: session.amount_total,
         currency: session.currency,
       });
+
+      // Fire-and-forget payment notification. Never let an email failure (or a
+      // missing RESEND_API_KEY) break the webhook ack — Stripe would retry.
+      if (c.env.RESEND_API_KEY) {
+        try {
+          const row = await c.env.DB.prepare(`SELECT domain_name FROM domains WHERE id = ?`)
+            .bind(domainId)
+            .first<{ domain_name: string }>();
+          const domainName = row?.domain_name ?? domainId;
+
+          const resend = new Resend(c.env.RESEND_API_KEY);
+          await resend.emails.send({
+            from: 'Drop Catch Engine <notifications@dropcatch.xaven.nl>',
+            to: 'alexander_kahwagi@hotmail.com',
+            subject: `💰 Domain blueprint unlocked — €29 received`,
+            html: `
+              <p><strong>New payment on Drop Catch Engine</strong></p>
+              <p>Domain: ${domainName}<br>Amount: €29.00<br>Time: ${new Date().toISOString()}</p>
+              <p><a href="https://drop-catch-dashboard.pages.dev">View dashboard →</a></p>
+            `,
+          });
+        } catch (_) {
+          /* non-fatal */
+        }
+      }
     } else {
       await log(c.env, 'checkout_completed', 'warning', {
         sessionId: session.id,

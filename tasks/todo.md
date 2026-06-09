@@ -62,12 +62,46 @@ Keys arrive later as secrets. Full flow built now.
 - [ ] `package.json` — `stripe: ^14.0.0`
 - [ ] `dashboard/src/api/client.ts` — `createCheckoutSession(domainId)`
 - [ ] `dashboard/src/components/DeployModal.tsx` — "Unlock Blueprint — €29" → redirect to Stripe
-- [ ] `dashboard/src/App.tsx` — return handler (`?session_id=&domain_id=`) → toast + refresh + clean URL
-- [ ] install / tsc / deploy worker / build+deploy dashboard / commit+push
+- [x] `dashboard/src/App.tsx` — return handler (`?session_id=&domain_id=`) → toast + refresh + clean URL
+- [x] install / tsc (both clean) / deploy worker / build+deploy dashboard / commit+push (c79a5d4)
+
+Verified live: health 200; /api/checkout → 400 (no domain_id), 404 (unknown), 503
+(real domain, Stripe not yet configured); /api/webhook → 400 (missing signature).
+Remaining (your part): `wrangler secret put STRIPE_SECRET_KEY` (+ PUBLISHABLE/WEBHOOK_SECRET),
+create the Stripe webhook endpoint → /api/webhook for `checkout.session.completed`.
 
 Decisions: webhook does idempotent `UPDATE domains SET status='deployed'` + log (no purchases table);
 Stripe on Workers uses `createFetchHttpClient()` + `constructEventAsync(..., createSubtleCryptoProvider())`;
 `apiVersion` omitted to dodge type-literal mismatch; return handling lives in App (modal navigated to Stripe).
+
+## Task: Marketing landing page + Stripe payment email notifications
+
+### Landing page (Task 1)
+- [x] `landing/index.html` — standalone dark SEO-tool landing (navbar, hero,
+      how-it-works, 3 example domain table rows w/ blurred locked report, why, pricing, footer)
+- [x] Responsive, max-width 1100px, no external fonts/frameworks, full meta tags, 16.2KB (<50KB)
+
+### Email notifications via Resend (Task 2)
+- [x] `npm install resend` (^6.12.4)
+- [x] `src/types/env.ts` — added `RESEND_API_KEY: string`
+- [x] `src/routes/checkout.ts` — after D1 update in `checkout.session.completed`,
+      fetch domain_name + send notification email; guarded on RESEND_API_KEY, non-fatal try/catch
+- [x] `wrangler.toml` — documented RESEND_API_KEY secret
+- [x] tsc clean + wrangler dry-run bundles Resend cleanly
+
+### Deploy (Task 3)
+- [x] Created Pages project + deployed: https://drop-catch-landing.pages.dev (HTTP 200)
+- [x] Redeployed worker with email feature (version 839f1eb6)
+- [x] Commit + push to origin/main
+
+### Review
+Landing page is a 16.2KB standalone HTML (no frameworks/external fonts/CDN), dark
+SEO-tool aesthetic, live at https://drop-catch-landing.pages.dev. Email notification
+fires on `checkout.session.completed` after the D1 status update — fetches the
+domain_name, sends via Resend, fully non-fatal and skipped entirely when
+RESEND_API_KEY is unset (so the webhook ack is never blocked). Remaining (your part):
+`wrangler secret put RESEND_API_KEY` and verify the `dropcatch.xaven.nl` sender
+domain in Resend before emails actually send.
 
 ## In progress / next
 - [x] Swappable SEO provider behind the mock (mock | ahrefs adapter) + tests

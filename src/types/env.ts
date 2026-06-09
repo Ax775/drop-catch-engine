@@ -28,4 +28,8 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET: string;
   /** Public dashboard origin — base for Checkout success/cancel redirects. */
   DASHBOARD_URL: string;
+
+  // --- Resend (set via `wrangler secret put RESEND_API_KEY`; email is a no-op until present) ---
+  /** Resend API key (re_…). Used to send payment notification emails. */
+  RESEND_API_KEY: string;
 }
