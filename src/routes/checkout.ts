@@ -148,7 +148,16 @@ webhookRoute.post('/', async (c) => {
     const session = event.data.object as Stripe.Checkout.Session;
     const domainId = session.metadata?.domain_id;
 
-    if (domainId) {
+    // `checkout.session.completed` can fire before money has actually settled
+    // (delayed/async payment methods leave payment_status as 'unpaid' or
+    // 'no_payment_required'). Fulfil only on a genuinely paid session, and
+    // re-assert the price/currency the server set — never trust the event's
+    // amount blindly. This closes the gap where a non-'paid' completion event
+    // would unlock the paid report for free.
+    const paid = session.payment_status === 'paid';
+    const amountOk = session.amount_total === UNIT_AMOUNT && session.currency === CURRENCY;
+
+    if (domainId && paid && amountOk) {
       // Idempotent: re-delivering the same event just re-sets the same status.
       await c.env.DB.prepare(
         `UPDATE domains SET status = 'deployed', updated_at = datetime('now') WHERE id = ?`,
@@ -200,7 +209,11 @@ webhookRoute.post('/', async (c) => {
     } else {
       await log(c.env, 'checkout_completed', 'warning', {
         sessionId: session.id,
-        note: 'missing metadata.domain_id',
+        note: 'session not fulfilled',
+        hasDomainId: Boolean(domainId),
+        paymentStatus: session.payment_status,
+        amountTotal: session.amount_total,
+        currency: session.currency,
       });
     }
   }

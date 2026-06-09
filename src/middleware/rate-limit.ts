@@ -12,10 +12,12 @@ import { cacheGet, cacheSet } from '../services/kv-cache';
  */
 export function rateLimit(): MiddlewareHandler<{ Bindings: Env }> {
   return async (c: Context<{ Bindings: Env }>, next: Next) => {
-    const ip =
-      c.req.header('CF-Connecting-IP') ||
-      c.req.header('X-Forwarded-For') ||
-      'unknown';
+    // Trust ONLY Cloudflare's CF-Connecting-IP. X-Forwarded-For is client-set and
+    // forgeable — keying on it would let an attacker rotate the header to evade
+    // the limit and write attacker-chosen KV keys. Cap the length so a hostile
+    // value can never approach KV's 512-byte key ceiling (which would otherwise
+    // throw and surface as a 500).
+    const ip = (c.req.header('CF-Connecting-IP') ?? 'unknown').slice(0, 100);
 
     const max = Number.parseInt(c.env.RATE_LIMIT_MAX ?? '100', 10) || 100;
     const windowSeconds =
