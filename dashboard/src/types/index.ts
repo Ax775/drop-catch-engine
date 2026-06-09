@@ -23,6 +23,13 @@ export interface DomainsResponse {
   totalPages: number;
 }
 
+export interface DomainStats {
+  total: number;
+  high_value_count: number;
+  deployed_count: number;
+  total_estimated_value_eur: number;
+}
+
 export type LogStatus = 'info' | 'success' | 'warning' | 'error';
 
 export interface SystemLog {

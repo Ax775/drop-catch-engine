@@ -3,6 +3,7 @@ import {
   type DomainFilters,
   type DomainRow,
   type DomainsResponse,
+  type DomainStats,
   type IngestPayload,
   type IngestResult,
   type LogsResponse,
@@ -73,6 +74,11 @@ export function getDomains(filters?: DomainFilters): Promise<DomainsResponse> {
 
 export function getDomain(id: string): Promise<DomainRow> {
   return request<DomainRow>(`/api/domains/${encodeURIComponent(id)}`);
+}
+
+/** Server-computed portfolio totals (authoritative SUM over all rows). */
+export function getDomainStats(): Promise<DomainStats> {
+  return request<DomainStats>('/api/domains/stats');
 }
 
 export function updateDomainStatus(id: string, status: string): Promise<DomainRow> {

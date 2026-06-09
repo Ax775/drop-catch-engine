@@ -40,6 +40,9 @@ RATE_LIMIT_MAX = "100"
 RATE_LIMIT_WINDOW_SECONDS = "60"
 # Public dashboard origin — base for Stripe Checkout success/cancel redirects.
 DASHBOARD_URL = "https://drop-catch-dashboard.pages.dev"
+# Payment notification email: recipient + verified Resend sender.
+NOTIFY_EMAIL = "alexander_kahwagi@hotmail.com"
+RESEND_FROM = "Drop Catch Engine <notifications@dropcatch.xaven.nl>"
 
 # Secrets (set via `wrangler secret put <NAME>`):
 # SEO_API_KEY

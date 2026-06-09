@@ -75,6 +75,37 @@ domainsRoute.get('/', async (c) => {
 });
 
 /**
+ * GET /api/domains/stats — server-computed portfolio totals.
+ *
+ * Registered before `/:id` so "stats" is not captured as a domain id. The total
+ * estimated value is summed in SQL (authoritative) rather than client-side over
+ * a capped page, which previously under-counted any portfolio over 100 rows.
+ */
+domainsRoute.get('/stats', async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT
+       COUNT(*) AS total,
+       SUM(CASE WHEN status = 'high_value' THEN 1 ELSE 0 END) AS high_value_count,
+       SUM(CASE WHEN status = 'deployed' THEN 1 ELSE 0 END) AS deployed_count,
+       ROUND(SUM(COALESCE(estimated_value_eur, 0)), 2) AS total_estimated_value_eur
+     FROM domains`,
+  ).first<{
+    total: number;
+    high_value_count: number;
+    deployed_count: number;
+    total_estimated_value_eur: number;
+  }>();
+
+  // SUM over an empty table yields NULL; normalise to 0 for a stable shape.
+  return c.json({
+    total: result?.total ?? 0,
+    high_value_count: result?.high_value_count ?? 0,
+    deployed_count: result?.deployed_count ?? 0,
+    total_estimated_value_eur: result?.total_estimated_value_eur ?? 0,
+  });
+});
+
+/**
  * GET /api/domains/:id — single domain detail.
  */
 domainsRoute.get('/:id', async (c) => {
@@ -105,6 +136,13 @@ domainsRoute.patch('/:id', async (c) => {
   const parsed = UpdateStatusSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: 'Validation failed', issues: parsed.error.issues }, 400);
+  }
+
+  // 'deployed' is the paid state — it may only be reached by the Stripe webhook
+  // after a confirmed payment, never via the public API. All other lifecycle
+  // transitions (archive, and restore/undo back to scanned/high_value) are fine.
+  if (parsed.data.status === 'deployed') {
+    return c.json({ error: 'Use Stripe checkout to deploy.' }, 403);
   }
 
   const existing = await c.env.DB.prepare(`SELECT id FROM domains WHERE id = ?`)

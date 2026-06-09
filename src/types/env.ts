@@ -31,4 +31,8 @@ export interface Env {
   // --- Resend (set via `wrangler secret put RESEND_API_KEY`; email is a no-op until present) ---
   /** Resend API key (re_…). Used to send payment notification emails. */
   RESEND_API_KEY: string;
+  /** Recipient of payment notification emails (an inbox you control). */
+  NOTIFY_EMAIL: string;
+  /** Verified Resend sender, e.g. "Drop Catch Engine <notifications@yourdomain>". */
+  RESEND_FROM: string;
 }

@@ -156,6 +156,16 @@ webhookRoute.post('/', async (c) => {
         .bind(domainId)
         .run();
 
+      // Record the payment. This row — keyed by the unique Stripe session id —
+      // is the single source of truth that unlocks the full blueprint. INSERT OR
+      // IGNORE keeps webhook re-deliveries idempotent (the UNIQUE constraint).
+      await c.env.DB.prepare(
+        `INSERT OR IGNORE INTO purchases (domain_id, stripe_session_id, amount_eur)
+         VALUES (?, ?, ?)`,
+      )
+        .bind(domainId, session.id, session.amount_total ? session.amount_total / 100 : 29)
+        .run();
+
       await log(c.env, 'checkout_completed', 'success', {
         domainId,
         sessionId: session.id,
@@ -174,8 +184,8 @@ webhookRoute.post('/', async (c) => {
 
           const resend = new Resend(c.env.RESEND_API_KEY);
           await resend.emails.send({
-            from: 'Drop Catch Engine <notifications@dropcatch.xaven.nl>',
-            to: 'alexander_kahwagi@hotmail.com',
+            from: c.env.RESEND_FROM,
+            to: c.env.NOTIFY_EMAIL,
             subject: `💰 Domain blueprint unlocked — €29 received`,
             html: `
               <p><strong>New payment on Drop Catch Engine</strong></p>

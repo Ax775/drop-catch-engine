@@ -6,7 +6,7 @@ import ROICalculator from './components/ROICalculator';
 import DeployModal from './components/DeployModal';
 import IngestModal from './components/IngestModal';
 import { useDomains } from './hooks/useDomains';
-import { getDomains, getLogs, updateDomainStatus } from './api/client';
+import { getDomainStats, getLogs, updateDomainStatus } from './api/client';
 import {
   Badge,
   Button,
@@ -48,22 +48,15 @@ function StatsBar({ refreshKey }: { refreshKey: number }) {
     let cancelled = false;
     (async () => {
       try {
-        const [all, high, deployed, valueSet] = await Promise.all([
-          getDomains({ limit: 1 }),
-          getDomains({ status: 'high_value', limit: 1 }),
-          getDomains({ status: 'deployed', limit: 1 }),
-          getDomains({ limit: 100, sortBy: 'estimated_value_eur', sortDir: 'desc' }),
-        ]);
+        // Single authoritative call — totals (incl. estimated value) are summed
+        // server-side across the whole portfolio, not over a capped page.
+        const s = await getDomainStats();
         if (cancelled) return;
-        const totalValue = valueSet.data.reduce(
-          (sum, d) => sum + (d.estimated_value_eur ?? 0),
-          0,
-        );
         setStats({
-          total: all.total,
-          highValue: high.total,
-          deployed: deployed.total,
-          totalValue,
+          total: s.total,
+          highValue: s.high_value_count,
+          deployed: s.deployed_count,
+          totalValue: s.total_estimated_value_eur,
         });
       } catch {
         if (!cancelled) setStats(null);
@@ -317,43 +310,23 @@ export default function App() {
 
   const clearSelection = useCallback(() => setSelectedIds(new Set()), []);
 
-  // Apply a status to all selected domains concurrently; returns the count changed.
-  const applyBulkStatus = useCallback(
-    async (status: 'deployed' | 'archived'): Promise<number> => {
-      const ids = Array.from(selectedIds);
-      const results = await Promise.allSettled(
-        ids.map((id) => updateDomainStatus(id, status)),
-      );
-      return results.filter((r) => r.status === 'fulfilled').length;
-    },
-    [selectedIds],
-  );
-
-  const bulkDeploy = useCallback(async () => {
-    const count = selectedIds.size;
-    if (count === 0) return;
-    setBulkBusy(true);
-    try {
-      const ok = await applyBulkStatus('deployed');
-      toast({
-        title: `Deployed ${ok} domain${ok === 1 ? '' : 's'}`,
-        variant: ok === count ? 'success' : 'warning',
-        description: ok === count ? undefined : `${count - ok} failed`,
-      });
-      clearSelection();
-      refetch();
-      bumpRefresh();
-    } finally {
-      setBulkBusy(false);
-    }
-  }, [selectedIds, applyBulkStatus, clearSelection, refetch, bumpRefresh, toast]);
+  // Archive all selected domains concurrently; returns the count changed.
+  // (Deploy is intentionally NOT a bulk action — it requires per-domain payment
+  // via Stripe Checkout, enforced server-side. There is no free deploy path.)
+  const applyBulkArchive = useCallback(async (): Promise<number> => {
+    const ids = Array.from(selectedIds);
+    const results = await Promise.allSettled(
+      ids.map((id) => updateDomainStatus(id, 'archived')),
+    );
+    return results.filter((r) => r.status === 'fulfilled').length;
+  }, [selectedIds]);
 
   const confirmBulkArchive = useCallback(async () => {
     const count = selectedIds.size;
     if (count === 0) return;
     setBulkBusy(true);
     try {
-      const ok = await applyBulkStatus('archived');
+      const ok = await applyBulkArchive();
       setBulkArchiveOpen(false);
       toast({
         title: `Archived ${ok} domain${ok === 1 ? '' : 's'}`,
@@ -366,7 +339,7 @@ export default function App() {
     } finally {
       setBulkBusy(false);
     }
-  }, [selectedIds, applyBulkStatus, clearSelection, refetch, bumpRefresh, toast]);
+  }, [selectedIds, applyBulkArchive, clearSelection, refetch, bumpRefresh, toast]);
 
   return (
     <div className="min-h-full bg-canvas">
@@ -403,7 +376,6 @@ export default function App() {
                 onToggleRow={toggleRow}
                 onToggleAll={toggleAll}
                 onClearSelection={clearSelection}
-                onBulkDeploy={bulkDeploy}
                 onBulkArchive={() => setBulkArchiveOpen(true)}
                 bulkBusy={bulkBusy}
               />

@@ -31,7 +31,6 @@ interface DomainTableProps {
   onToggleRow: (id: string) => void;
   onToggleAll: (ids: string[], checked: boolean) => void;
   onClearSelection: () => void;
-  onBulkDeploy: () => void;
   onBulkArchive: () => void;
   bulkBusy: boolean;
 }
@@ -165,7 +164,6 @@ export default function DomainTable({
   onToggleRow,
   onToggleAll,
   onClearSelection,
-  onBulkDeploy,
   onBulkArchive,
   bulkBusy,
 }: DomainTableProps) {
@@ -240,18 +238,9 @@ export default function DomainTable({
           <div className="ml-auto flex items-center gap-2">
             <Button
               size="sm"
-              variant="primary"
-              onClick={onBulkDeploy}
-              isLoading={bulkBusy}
-              leftIcon={<Rocket className="h-3.5 w-3.5" />}
-            >
-              Deploy
-            </Button>
-            <Button
-              size="sm"
               variant="outline"
               onClick={onBulkArchive}
-              disabled={bulkBusy}
+              isLoading={bulkBusy}
               leftIcon={<Archive className="h-3.5 w-3.5" />}
             >
               Archive
