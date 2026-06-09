@@ -1,7 +1,13 @@
 import { Hono } from 'hono';
+import { z } from 'zod';
 import Stripe from 'stripe';
 import { Resend } from 'resend';
 import type { Env } from '../types/env';
+
+/** POST /api/checkout request body. */
+const CheckoutSchema = z.object({
+  domain_id: z.string().min(1),
+});
 
 /**
  * Paid blueprint/domain unlock via Stripe Checkout.
@@ -45,10 +51,11 @@ checkoutRoute.post('/', async (c) => {
     return c.json({ error: 'Invalid JSON body' }, 400);
   }
 
-  const domainId = (body as { domain_id?: unknown } | null)?.domain_id;
-  if (typeof domainId !== 'string' || domainId.length === 0) {
+  const parsed = CheckoutSchema.safeParse(body);
+  if (!parsed.success) {
     return c.json({ error: 'domain_id is required' }, 400);
   }
+  const domainId = parsed.data.domain_id;
 
   const domain = await c.env.DB.prepare(`SELECT id, domain_name FROM domains WHERE id = ?`)
     .bind(domainId)

@@ -18,6 +18,7 @@ import {
   type BadgeVariant,
 } from './components/ui';
 import { ApiError, type DomainFilters, type DomainRow, type SystemLog, type LogStatus } from './types';
+import { formatEur } from './lib/format';
 
 type Tab = 'domains' | 'roi' | 'logs';
 
@@ -34,14 +35,6 @@ const LOG_STATUS_VARIANT: Record<LogStatus, BadgeVariant> = {
   warning: 'warning',
   error: 'danger',
 };
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat('en-IE', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 /**
  * Compact inline stat summary — a single line of figures, no cards or icons,

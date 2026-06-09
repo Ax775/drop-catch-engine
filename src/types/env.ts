@@ -1,7 +1,6 @@
 export interface DomainQueueMessage {
   domainId: string;
   domainName: string;
-  retryCount: number;
 }
 
 export interface Env {

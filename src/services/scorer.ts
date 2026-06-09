@@ -14,6 +14,25 @@ export const HIGH_VALUE_TLDS: readonly string[] = [
 ];
 
 /**
+ * Scoring weights and thresholds. Centralised so the model can be tuned in one
+ * place and so the numbers are self-documenting at each call site.
+ */
+// isHighValue: a domain qualifies on strong DA *and* link volume (strictly above).
+const HIGH_VALUE_DA_THRESHOLD = 25;
+const HIGH_VALUE_BACKLINK_THRESHOLD = 150;
+// scoreDomain weights.
+const DA_SCORE_WEIGHT = 2;
+const BACKLINK_LOG_WEIGHT = 20;
+const AUTHORITY_LINK_BONUS = 15;
+const AUTHORITY_BONUS_CAP = 60;
+// estimateValue (EUR) coefficients.
+const VALUE_BASE_EUR = 50;
+const VALUE_DA_MULTIPLIER = 8;
+const VALUE_BACKLINK_MULTIPLIER = 0.3;
+const VALUE_BACKLINK_CAP_EUR = 2000;
+const VALUE_AUTHORITY_LINK_EUR = 200;
+
+/**
  * Count how many source authority links match a high-value TLD.
  */
 function authorityLinkMatches(links: string[]): number {
@@ -28,7 +47,12 @@ function authorityLinkMatches(links: string[]): number {
  * when any single backlink originates from a high-value TLD.
  */
 export function isHighValue(metrics: SeoMetrics): boolean {
-  if (metrics.da_score > 25 && metrics.backlink_count > 150) return true;
+  if (
+    metrics.da_score > HIGH_VALUE_DA_THRESHOLD &&
+    metrics.backlink_count > HIGH_VALUE_BACKLINK_THRESHOLD
+  ) {
+    return true;
+  }
   return authorityLinkMatches(metrics.source_authority_links) > 0;
 }
 
@@ -46,10 +70,13 @@ export interface ScoreResult {
  * authorityLinkBonus = (matching authority links * 15), capped at 60.
  */
 export function scoreDomain(metrics: SeoMetrics): ScoreResult {
-  const authorityBonus = Math.min(authorityLinkMatches(metrics.source_authority_links) * 15, 60);
+  const authorityBonus = Math.min(
+    authorityLinkMatches(metrics.source_authority_links) * AUTHORITY_LINK_BONUS,
+    AUTHORITY_BONUS_CAP,
+  );
   const score =
-    metrics.da_score * 2 +
-    Math.log10(metrics.backlink_count + 1) * 20 +
+    metrics.da_score * DA_SCORE_WEIGHT +
+    Math.log10(metrics.backlink_count + 1) * BACKLINK_LOG_WEIGHT +
     authorityBonus;
   return {
     status: isHighValue(metrics) ? 'high_value' : 'scanned',
@@ -65,9 +92,9 @@ export function scoreDomain(metrics: SeoMetrics): ScoreResult {
 export function estimateValue(metrics: SeoMetrics): number {
   const authorityBonus = authorityLinkMatches(metrics.source_authority_links);
   const value =
-    50 +
-    metrics.da_score * 8 +
-    Math.min(metrics.backlink_count * 0.3, 2000) +
-    authorityBonus * 200;
+    VALUE_BASE_EUR +
+    metrics.da_score * VALUE_DA_MULTIPLIER +
+    Math.min(metrics.backlink_count * VALUE_BACKLINK_MULTIPLIER, VALUE_BACKLINK_CAP_EUR) +
+    authorityBonus * VALUE_AUTHORITY_LINK_EUR;
   return Math.round(value);
 }

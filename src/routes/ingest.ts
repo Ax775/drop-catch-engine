@@ -30,33 +30,29 @@ ingestRoute.post('/', async (c) => {
   for (const d of domains) {
     const domainName = d.domain_name.trim().toLowerCase();
 
-    const result = await c.env.DB.prepare(
+    // INSERT … RETURNING yields the generated id only when a row was actually
+    // inserted; a duplicate is ignored and returns no row. This collapses the
+    // former insert + follow-up SELECT into one statement and removes the
+    // read-after-write race where a concurrent ingest could be observed.
+    const row = await c.env.DB.prepare(
       `INSERT OR IGNORE INTO domains (domain_name, expiration_date, acquisition_cost_eur, status)
-       VALUES (?, ?, ?, 'scanned')`,
+       VALUES (?, ?, ?, 'scanned')
+       RETURNING id`,
     )
       .bind(domainName, d.expiration_date ?? null, d.acquisition_cost_eur ?? null)
-      .run();
+      .first<{ id: string }>();
 
-    const inserted = (result.meta?.changes ?? 0) > 0;
-    if (!inserted) {
+    if (!row) {
       duplicates++;
       continue;
     }
     accepted++;
 
-    // Fetch the generated id so the queue message references the right row.
-    const row = await c.env.DB.prepare(`SELECT id FROM domains WHERE domain_name = ?`)
-      .bind(domainName)
-      .first<{ id: string }>();
-
-    if (row) {
-      await c.env.DOMAIN_QUEUE.send({
-        domainId: row.id,
-        domainName,
-        retryCount: 0,
-      });
-      queued++;
-    }
+    await c.env.DOMAIN_QUEUE.send({
+      domainId: row.id,
+      domainName,
+    });
+    queued++;
   }
 
   await c.env.DB.prepare(

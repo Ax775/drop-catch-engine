@@ -5,6 +5,21 @@ import type { SeoProvider } from './provider';
 
 const RETRY_AFTER_MS = 2_000;
 
+// --- Deterministic metric derivation (from the domain hash) ---
+const DA_SCORE_MODULO = 101; // da_score in 0..100
+const BACKLINK_HASH_MULTIPLIER = 7;
+const BACKLINK_MODULO = 5000; // backlink_count in 0..4999
+const MAX_SOURCE_LINKS = 6; // 0..5 source links per domain
+const AUTHORITY_LINK_VARIANTS = 10;
+const AUTHORITY_LINK_THRESHOLD = 3; // variant < 3 => ~30% authority-TLD link
+const ORDINARY_LINK_MODULO = 997;
+
+// --- Simulated transient failures (cumulative thresholds on a single roll) ---
+const RATE_429_THRESHOLD = 0.15; // 15% Too Many Requests
+const RATE_503_THRESHOLD = 0.2; //  next 5% Service Unavailable
+const DEFAULT_MIN_LATENCY_MS = 100;
+const DEFAULT_MAX_LATENCY_MS = 400;
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -26,19 +41,19 @@ export function hashDomain(domainName: string): number {
 export function generateMetrics(domainName: string): SeoMetrics {
   const hash = hashDomain(domainName);
 
-  const da_score = hash % 101; // 0..100
-  const backlink_count = (hash * 7) % 5000; // 0..4999
+  const da_score = hash % DA_SCORE_MODULO;
+  const backlink_count = (hash * BACKLINK_HASH_MULTIPLIER) % BACKLINK_MODULO;
 
-  const linkCount = hash % 6; // 0..5 source links
+  const linkCount = hash % MAX_SOURCE_LINKS;
   const links: string[] = [];
   for (let i = 0; i < linkCount; i++) {
-    const variant = (hash + i * 13) % 10;
-    if (variant < 3) {
+    const variant = (hash + i * 13) % AUTHORITY_LINK_VARIANTS;
+    if (variant < AUTHORITY_LINK_THRESHOLD) {
       // ~30% chance of a high-value authority TLD
       const tld = HIGH_VALUE_TLDS[(hash + i) % HIGH_VALUE_TLDS.length];
       links.push(`authority-source-${i}${tld}`);
     } else {
-      links.push(`linker-${(hash + i) % 997}.com`);
+      links.push(`linker-${(hash + i) % ORDINARY_LINK_MODULO}.com`);
     }
   }
 
@@ -60,8 +75,8 @@ export interface MockProviderOptions {
  */
 export function createMockProvider(options: MockProviderOptions = {}): SeoProvider {
   const rng = options.random ?? Math.random;
-  const minLatency = options.minLatencyMs ?? 100;
-  const maxLatency = options.maxLatencyMs ?? 400;
+  const minLatency = options.minLatencyMs ?? DEFAULT_MIN_LATENCY_MS;
+  const maxLatency = options.maxLatencyMs ?? DEFAULT_MAX_LATENCY_MS;
 
   return {
     name: 'mock',
@@ -70,8 +85,8 @@ export function createMockProvider(options: MockProviderOptions = {}): SeoProvid
       if (latency > 0) await sleep(latency);
 
       const roll = rng();
-      if (roll < 0.15) throw new SeoApiError('Too Many Requests', 429, RETRY_AFTER_MS);
-      if (roll < 0.2) throw new SeoApiError('Service Unavailable', 503);
+      if (roll < RATE_429_THRESHOLD) throw new SeoApiError('Too Many Requests', 429, RETRY_AFTER_MS);
+      if (roll < RATE_503_THRESHOLD) throw new SeoApiError('Service Unavailable', 503);
 
       return generateMetrics(domainName);
     },

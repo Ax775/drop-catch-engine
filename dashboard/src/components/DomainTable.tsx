@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import type { DomainFilters, DomainRow, SortBy } from '../types';
 import { blueprintUrl } from '../api/client';
+import { formatEur } from '../lib/format';
+import { roiPercent } from '../lib/value';
 import StatusBadge from './StatusBadge';
 import { Button, Card, cn, EmptyState, Input, Select, Skeleton, type SelectOption } from './ui';
 
@@ -70,19 +72,10 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'archived', label: 'Archived' },
 ];
 
-function formatEur(value: number | null): string {
-  if (value === null || value === undefined) return '—';
-  return new Intl.NumberFormat('en-IE', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 /** ROI as a signed percentage, or null when it can't be computed. */
 function roiValue(estimated: number | null, cost: number | null): number | null {
-  if (estimated === null || cost === null || cost === 0) return null;
-  return ((estimated - cost) / cost) * 100;
+  if (estimated === null || cost === null) return null;
+  return roiPercent(estimated, cost);
 }
 
 function SortableHeader({

@@ -5,14 +5,7 @@ import {
   estimateMarketValue,
   roiPercent as calcRoi,
 } from '../lib/value';
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat('en-IE', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+import { formatEur } from '../lib/format';
 
 export default function ROICalculator() {
   const [cost, setCost] = useState(100);

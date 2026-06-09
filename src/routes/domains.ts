@@ -134,5 +134,9 @@ domainsRoute.patch('/:id', async (c) => {
     .bind(id)
     .first<DomainRowRaw>();
 
-  return c.json(parseDomainRow(raw as DomainRowRaw));
+  if (!raw) {
+    // The row existed a moment ago; a null here means it was deleted concurrently.
+    return c.json({ error: 'Domain not found' }, 404);
+  }
+  return c.json(parseDomainRow(raw));
 });

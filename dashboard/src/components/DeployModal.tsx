@@ -3,6 +3,7 @@ import { Check, Copy, CreditCard } from 'lucide-react';
 import type { DomainRow } from '../types';
 import { ApiError } from '../types';
 import { blueprintUrl, createCheckoutSession } from '../api/client';
+import { formatEur } from '../lib/format';
 import { Button, Modal, cn } from './ui';
 import StatusBadge from './StatusBadge';
 
@@ -12,15 +13,6 @@ interface DeployModalProps {
   /** Kept for API symmetry — the deploy now completes server-side via the
    *  Stripe webhook after the user returns from Checkout (handled in App). */
   onDeployed?: (updated: DomainRow) => void;
-}
-
-function formatEur(value: number | null): string {
-  if (value === null) return '—';
-  return new Intl.NumberFormat('en-IE', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 /**
