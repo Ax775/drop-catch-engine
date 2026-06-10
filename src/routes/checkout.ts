@@ -138,10 +138,10 @@ webhookRoute.post('/', async (c) => {
       Stripe.createSubtleCryptoProvider(),
     );
   } catch (err) {
-    return c.json(
-      { error: `Webhook signature verification failed: ${err instanceof Error ? err.message : 'unknown'}` },
-      400,
-    );
+    // Log the detailed reason server-side, but never echo SDK/verification
+    // internals back to the (unauthenticated) caller.
+    console.error('Stripe webhook signature verification failed:', err);
+    return c.json({ error: 'Webhook signature verification failed' }, 400);
   }
 
   if (event.type === 'checkout.session.completed') {
